@@ -6,14 +6,15 @@ import RemoveIcon from '@mui/icons-material/Remove';
 function ManageUsersPage() {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [userPolicies, setUserPolicies] = useState([]);
   const [policies, setPolicies] = useState([]);
-  const [roles, setRoles] = useState(['user', 'admin']); // 사용자 역할 목록
-  const [userRole, setUserRole] = useState(''); // 선택된 사용자의 역할
-  const [loginCooldownHour, setLoginCooldownHour] = useState(0); // 로그인 제한 시간
-  const [point, setPoint] = useState(0); // 사용자 포인트
-  const [lastLoginAt, setLastLoginAt] = useState(''); // 마지막 로그인 시간
-  const [newPolicy, setNewPolicy] = useState(''); // 새로운 정책 추가 시 선택된 정책
-
+  const [newPolicyId, setNewPolicyId] = useState('');
+  const [roles, setRoles] = useState(['user', 'admin']);
+  const [userRole, setUserRole] = useState('');
+  const [loginCooldownHour, setLoginCooldownHour] = useState(0);
+  const [point, setPoint] = useState(0);
+  const [lastLoginAt, setLastLoginAt] = useState('');
+  const [accountExpiry, setAccountExpiry] = useState('');
   const [open, setOpen] = useState(false);
 
   // 사용자 목록 가져오기 및 첫 번째 사용자 자동 선택
@@ -25,7 +26,6 @@ function ManageUsersPage() {
         setUsers(usersData.users);
 
         if (usersData.users.length > 0) {
-          // 첫 번째 사용자 자동 선택
           handleUserSelection(usersData.users[0]);
         }
       } catch (error) {
@@ -36,80 +36,100 @@ function ManageUsersPage() {
     fetchUsers();
   }, []);
 
+  // 정책 목록 가져오기 (드롭다운용)
+  useEffect(() => {
+    async function fetchPolicies() {
+      try {
+        const response = await fetch('/api/admin/policy');
+        const data = await response.json();
+        setPolicies(data.policies); // 정책 목록 설정
+      } catch (error) {
+        console.error('Error fetching policies:', error);
+      }
+    }
+
+    fetchPolicies();
+  }, []);
+
   // 특정 사용자의 정책 목록 가져오기
-  const fetchPolicies = async (userId) => {
+  const fetchUserPolicies = async (userId) => {
     try {
       const response = await fetch(`/api/admin/users/${userId}/policies`);
       const data = await response.json();
-      setPolicies(data.policies);
+      setUserPolicies(data.policies);
     } catch (error) {
-      console.error('Error fetching policies:', error);
+      console.error('Error fetching user policies:', error);
     }
   };
 
-  // 사용자 선택 시 정보 설정 (조회된 Role 값을 화면에 반영)
-  const handleUserSelection = (user) => {
+// 사용자 선택 시 정보 설정
+const handleUserSelection = (user) => {
+  if (selectedUser !== user.id) { // 이미 선택된 사용자인지 확인하여 덮어쓰지 않음
     setSelectedUser(user.id);
-    setUserRole(user.role); // 조회된 역할을 상태에 반영
+    setUserRole(user.role);
     setLoginCooldownHour(user.loginCooldownHour);
     setPoint(user.point);
-    setLastLoginAt(user.lastLoginAt || '');
-    fetchPolicies(user.id); // 정책 가져오기
-  };
+    setLastLoginAt(user.lastLoginAt ? new Date(user.lastLoginAt).toISOString().substring(0, 16) : ''); // 날짜 형식 유지
+    setAccountExpiry(user.accountExpiry ? new Date(user.accountExpiry).toISOString().substring(0, 16) : ''); // 날짜 형식 유지
+    fetchUserPolicies(user.id);
+  }
+};
 
-  // 사용자 정보 업데이트
-  const handleUserUpdate = async (userId) => {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          role: userRole,
-          loginCooldownHour,
-          point,
-          lastLoginAt,
-        }),
-      });
+// 사용자 정보 업데이트 후 상태 동기화
+const handleUserUpdate = async (userId) => {
+  try {
+    const response = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        role: userRole,
+        loginCooldownHour,
+        accountExpiry,
+        point,
+        lastLoginAt,
+      }),
+    });
 
-      if (response.ok) {
-        alert(`User information updated successfully for user: ${userId}`);
-      } else {
-        const errorData = await response.json();
-        console.error('Error updating user:', errorData.message);
-      }
-    } catch (error) {
-      console.error('Error updating user:', error);
+    if (response.ok) {
+      alert('User information updated successfully.');
+    } else {
+      const errorData = await response.json();
+      console.error('Error updating user information:', errorData.message);
     }
-  };
+  } catch (error) {
+    console.error('Error updating user information:', error);
+  }
+};
 
-  // 새로운 정책 추가
-  const handleAddPolicy = async () => {
+  // 새로운 사용자 정책 추가
+  const handleAddUserPolicy = async () => {
     try {
       const response = await fetch(`/api/admin/users/${selectedUser}/policies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ policyName: newPolicy }), // 정책 추가 데이터
+        body: JSON.stringify({ policyId: newPolicyId }), // 선택된 정책 ID 전송
       });
 
       if (response.ok) {
         const data = await response.json();
-        setPolicies([...policies, data.policy]);
+        setUserPolicies([...userPolicies, data.policy]); // 추가된 정책을 사용자 정책 목록에 추가
         setOpen(false);
+        setNewPolicyId(''); // 정책 선택 초기화
       } else {
         const errorData = await response.json();
-        console.error('Error adding policy:', errorData.message);
+        console.error('Error adding user policy:', errorData.message);
       }
     } catch (error) {
-      console.error('Error adding policy:', error);
+      console.error('Error adding user policy:', error);
     }
   };
 
   // 정책 삭제 처리
-  const handleDeletePolicy = async (policyId) => {
+  const handleDeleteUserPolicy = async (policyId) => {
     const confirmDelete = window.confirm('정말 삭제하시겠습니까?');
 
     if (!confirmDelete) return;
@@ -120,13 +140,13 @@ function ManageUsersPage() {
       });
 
       if (response.ok) {
-        setPolicies(policies.filter(policy => policy.id !== policyId));
+        setUserPolicies(userPolicies.filter(policy => policy.id !== policyId));
       } else {
         const errorData = await response.json();
-        console.error('Error deleting policy:', errorData.message);
+        console.error('Error deleting user policy:', errorData.message);
       }
     } catch (error) {
-      console.error('Error deleting policy:', error);
+      console.error('Error deleting user policy:', error);
     }
   };
 
@@ -143,6 +163,7 @@ function ManageUsersPage() {
               <TableCell>Email</TableCell>
               <TableCell>Role</TableCell>
               <TableCell>Point</TableCell>
+              <TableCell>Expiry Date</TableCell>
               <TableCell>Login Cooldown Hour</TableCell>
               <TableCell>Last Login</TableCell>
               <TableCell>Action</TableCell>
@@ -155,7 +176,7 @@ function ManageUsersPage() {
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
                   <Select
-                    value={userRole} // 조회된 Role을 화면에 표시
+                    value={userRole}
                     onChange={(e) => setUserRole(e.target.value)}
                   >
                     {roles.map((role) => (
@@ -174,6 +195,13 @@ function ManageUsersPage() {
                 </TableCell>
                 <TableCell>
                   <TextField
+                    value={accountExpiry ? accountExpiry.substring(0, 16) : ''}
+                    onChange={(e) => setAccountExpiry(e.target.value)}
+                    type="datetime-local"
+                  />
+                </TableCell>
+                <TableCell>
+                  <TextField
                     value={loginCooldownHour}
                     onChange={(e) => setLoginCooldownHour(e.target.value)}
                     type="number"
@@ -181,7 +209,7 @@ function ManageUsersPage() {
                 </TableCell>
                 <TableCell>
                   <TextField
-                    value={lastLoginAt}
+                    value={lastLoginAt ? lastLoginAt.substring(0, 16) : ''}
                     onChange={(e) => setLastLoginAt(e.target.value)}
                     type="datetime-local"
                   />
@@ -210,16 +238,23 @@ function ManageUsersPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {policies.map((policy) => (
+                {userPolicies.map((policy) => (
                   <TableRow key={policy.id}>
                     <TableCell>{policy.name}</TableCell>
                     <TableCell>
-                      <IconButton color="error" onClick={() => handleDeletePolicy(policy.id)}>
+                      <IconButton color="error" onClick={() => handleDeleteUserPolicy(policy.id)}>
                         <RemoveIcon />
                       </IconButton>
                     </TableCell>
                   </TableRow>
                 ))}
+                <TableRow>
+                  <TableCell colSpan={2} align="center">
+                    <IconButton color="primary" onClick={() => setOpen(true)}>
+                      <AddIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </TableContainer>
@@ -228,20 +263,23 @@ function ManageUsersPage() {
 
       {/* 정책 추가 다이얼로그 */}
       <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>Add New Policy</DialogTitle>
+        <DialogTitle>Add New User Policy</DialogTitle>
         <DialogContent>
-          <TextField
-            margin="dense"
-            label="Policy Name"
-            type="text"
+          <Select
             fullWidth
-            value={newPolicy}
-            onChange={(e) => setNewPolicy(e.target.value)}
-          />
+            value={newPolicyId}
+            onChange={(e) => setNewPolicyId(e.target.value)}
+          >
+            {policies.map((policy) => (
+              <MenuItem key={policy.id} value={policy.id}>
+                {policy.policyName}
+              </MenuItem>
+            ))}
+          </Select>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleAddPolicy} color="primary">Save</Button>
+          <Button onClick={handleAddUserPolicy} color="primary">Save</Button>
         </DialogActions>
       </Dialog>
     </div>
