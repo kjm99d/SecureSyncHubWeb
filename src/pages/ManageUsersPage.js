@@ -9,14 +9,32 @@ function ManageUsersPage() {
   const [userPolicies, setUserPolicies] = useState([]);
   const [policies, setPolicies] = useState([]);
   const [newPolicyId, setNewPolicyId] = useState('');
-  const [newPolicyValue, setNewPolicyValue] = useState(''); // 새 정책의 Value 입력받기
-  const [roles, setRoles] = useState(['user', 'admin']);
-  const [userRole, setUserRole] = useState('');
-  const [loginCooldownHour, setLoginCooldownHour] = useState(0);
-  const [point, setPoint] = useState(0);
-  const [lastLoginAt, setLastLoginAt] = useState('');
-  const [accountExpiry, setAccountExpiry] = useState('');
+  const [newPolicyValue, setNewPolicyValue] = useState('');
   const [open, setOpen] = useState(false);
+
+  // 역할 정의
+  const roles = ['user', 'admin']; // 이 부분 추가
+
+   // 날짜를 'YYYY-MM-DDTHH:MM' 형식으로 변환하는 함수
+   const formatDateTimeLocal = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateTimeLocalEx = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   useEffect(() => {
     async function fetchUsers() {
@@ -26,7 +44,7 @@ function ManageUsersPage() {
         setUsers(usersData.users);
 
         if (usersData.users.length > 0) {
-          handleUserSelection(usersData.users[0]);
+          handleUserSelection(usersData.users[0].id);
         }
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -60,19 +78,21 @@ function ManageUsersPage() {
     }
   };
 
-  const handleUserSelection = (user) => {
-    if (selectedUser !== user.id) {
-      setSelectedUser(user.id);
-      setUserRole(user.role);
-      setLoginCooldownHour(user.loginCooldownHour);
-      setPoint(user.point);
-      setLastLoginAt(user.lastLoginAt ? new Date(user.lastLoginAt).toISOString().substring(0, 16) : '');
-      setAccountExpiry(user.accountExpiry ? new Date(user.accountExpiry).toISOString().substring(0, 16) : '');
-      fetchUserPolicies(user.id);
-    }
+  const handleUserSelection = (userId) => {
+    setSelectedUser(userId);
+    fetchUserPolicies(userId);
+  };
+
+  const handleUserChange = (userId, key, value) => {
+    setUsers((prevUsers) =>
+      prevUsers.map((user) =>
+        user.id === userId ? { ...user, [key]: value } : user
+      )
+    );
   };
 
   const handleUserUpdate = async (userId) => {
+    const user = users.find((u) => u.id === userId);
     try {
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
@@ -80,11 +100,11 @@ function ManageUsersPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          role: userRole,
-          loginCooldownHour,
-          accountExpiry,
-          point,
-          lastLoginAt,
+          role: user.role,
+          loginCooldownHour: user.loginCooldownHour,
+          accountExpiry: user.accountExpiry,
+          point: user.point,
+          lastLoginAt: user.lastLoginAt,
         }),
       });
 
@@ -108,7 +128,7 @@ function ManageUsersPage() {
         },
         body: JSON.stringify({
           policyId: newPolicyId,
-          policyValue: newPolicyValue, // 추가된 Value 전송
+          policyValue: newPolicyValue,
         }),
       });
 
@@ -117,7 +137,7 @@ function ManageUsersPage() {
         setUserPolicies([...userPolicies, data.policy]);
         setOpen(false);
         setNewPolicyId('');
-        setNewPolicyValue(''); // 입력 필드 초기화
+        setNewPolicyValue('');
       } else {
         const errorData = await response.json();
         console.error('Error adding user policy:', errorData.message);
@@ -168,11 +188,14 @@ function ManageUsersPage() {
           </TableHead>
           <TableBody>
             {users.map((user) => (
-              <TableRow key={user.id} onClick={() => handleUserSelection(user)}>
+              <TableRow key={user.id} onClick={() => handleUserSelection(user.id)}>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <Select value={userRole} onChange={(e) => setUserRole(e.target.value)}>
+                  <Select
+                    value={user.role}
+                    onChange={(e) => handleUserChange(user.id, 'role', e.target.value)}
+                  >
                     {roles.map((role) => (
                       <MenuItem key={role} value={role}>
                         {role}
@@ -181,16 +204,32 @@ function ManageUsersPage() {
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <TextField value={point} onChange={(e) => setPoint(e.target.value)} type="number" />
+                  <TextField
+                    value={user.point}
+                    onChange={(e) => handleUserChange(user.id, 'point', e.target.value)}
+                    type="number"
+                  />
                 </TableCell>
                 <TableCell>
-                  <TextField value={accountExpiry} onChange={(e) => setAccountExpiry(e.target.value)} type="datetime-local" />
+                  <TextField
+                    value={formatDateTimeLocal(user.accountExpiry)} // 날짜 형식 변환
+                    onChange={(e) => handleUserChange(user.id, 'accountExpiry', e.target.value)}
+                    type="date"
+                  />
                 </TableCell>
                 <TableCell>
-                  <TextField value={loginCooldownHour} onChange={(e) => setLoginCooldownHour(e.target.value)} type="number" />
+                  <TextField
+                    value={user.loginCooldownHour}
+                    onChange={(e) => handleUserChange(user.id, 'loginCooldownHour', e.target.value)}
+                    type="number"
+                  />
                 </TableCell>
                 <TableCell>
-                  <TextField value={lastLoginAt} onChange={(e) => setLastLoginAt(e.target.value)} type="datetime-local" />
+                  <TextField
+                    value={formatDateTimeLocal(user.lastLoginAt)} // 날짜 형식 변환
+                    onChange={(e) => handleUserChange(user.id, 'lastLoginAt', e.target.value)}
+                    type="date"
+                  />
                 </TableCell>
                 <TableCell>
                   <Button variant="outlined" onClick={() => handleUserUpdate(user.id)}>
@@ -212,7 +251,7 @@ function ManageUsersPage() {
               <TableHead>
                 <TableRow>
                   <TableCell>Policy Name</TableCell>
-                  <TableCell>Policy Value</TableCell> {/* Policy Value 추가 */}
+                  <TableCell>Policy Value</TableCell>
                   <TableCell>Action</TableCell>
                 </TableRow>
               </TableHead>
@@ -220,7 +259,7 @@ function ManageUsersPage() {
                 {userPolicies.map((policy) => (
                   <TableRow key={policy.id}>
                     <TableCell>{policy.Policy.policyName}</TableCell>
-                    <TableCell>{policy.policyValue}</TableCell> {/* Policy Value 출력 */}
+                    <TableCell>{policy.policyValue}</TableCell>
                     <TableCell>
                       <IconButton color="error" onClick={() => handleDeleteUserPolicy(policy.id)}>
                         <RemoveIcon />
@@ -258,7 +297,7 @@ function ManageUsersPage() {
             type="text"
             fullWidth
             value={newPolicyValue}
-            onChange={(e) => setNewPolicyValue(e.target.value)} // Policy Value 입력받기
+            onChange={(e) => setNewPolicyValue(e.target.value)}
             style={{ marginTop: '20px' }}
           />
         </DialogContent>
