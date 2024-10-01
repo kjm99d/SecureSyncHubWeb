@@ -8,6 +8,7 @@ import ManageUsersPage from './ManageUsersPage';
 import ManageFilesPage from './ManageFilesPage';
 import SettingsPage from './SettingsPage';
 import LogoutPage from './LogoutPage';
+import ManagePoliciesPage from './ManagePoliciesPage';
 
 const drawerWidth = 240;
 
@@ -28,6 +29,9 @@ function AdminConsolePage() {
       <List>
         <ListItem button component={Link} to="/admin/console/dashboard">
           <ListItemText primary="Dashboard" />
+        </ListItem>
+        <ListItem button component={Link} to="/admin/console/manage-policy">
+          <ListItemText primary="Manage User Policy" />
         </ListItem>
         <ListItem button component={Link} to="/admin/console/manage-users">
           <ListItemText primary="Manage Users" />
@@ -112,11 +116,12 @@ function AdminConsolePage() {
           mt: 8,
         }}
       >
-        <Toolbar />
+        
         
         {/* 각 페이지에 따른 라우팅 설정 */}
         <Routes>
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="manage-policy" element={<ManagePoliciesPage />} />
           <Route path="manage-users" element={<ManageUsersPage />} />
           <Route path="manage-files" element={<ManageFilesPage />} />
           <Route path="settings" element={<SettingsPage />} />
