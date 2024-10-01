@@ -51,7 +51,7 @@ function ManageFilesPage() {
     try {
       const response = await fetch(`/api/admin/users/${userId}/policies`);
       const data = await response.json();
-      setPolicies(data.policies);
+      setPolicies(data.filePolicies);
     } catch (error) {
       console.error('Error fetching policies:', error);
     }
