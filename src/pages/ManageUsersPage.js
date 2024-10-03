@@ -55,6 +55,8 @@ function ManageUsersPage() {
   }, []);
 
   useEffect(() => {
+
+    // 일반 정책 목록 불러오기
     async function fetchPolicies() {
       try {
         const response = await fetch('/api/admin/policy');
@@ -134,7 +136,7 @@ function ManageUsersPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setUserPolicies([...userPolicies, data.policy]);
+        setUserPolicies(data.userPolicies);
         setOpen(false);
         setNewPolicyId('');
         setNewPolicyValue('');
@@ -152,7 +154,7 @@ function ManageUsersPage() {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`/api/admin/users/${selectedUser}/policies/${policyId}`, {
+      const response = await fetch(`/api/admin/users/${selectedUser}/policy/${policyId}`, {
         method: 'DELETE',
       });
 
@@ -226,9 +228,9 @@ function ManageUsersPage() {
                 </TableCell>
                 <TableCell>
                   <TextField
-                    value={formatDateTimeLocal(user.lastLoginAt)} // 날짜 형식 변환
+                    value={formatDateTimeLocalEx(user.lastLoginAt)} // 날짜 형식 변환
                     onChange={(e) => handleUserChange(user.id, 'lastLoginAt', e.target.value)}
-                    type="date"
+                    type="datetime-local"
                   />
                 </TableCell>
                 <TableCell>
@@ -285,11 +287,13 @@ function ManageUsersPage() {
         <DialogTitle>Add New User Policy</DialogTitle>
         <DialogContent>
           <Select fullWidth value={newPolicyId} onChange={(e) => setNewPolicyId(e.target.value)}>
-            {policies.map((policy) => (
-              <MenuItem key={policy.id} value={policy.id}>
-                {policy.policyName}
-              </MenuItem>
-            ))}
+            {
+              policies.map((item) => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.policyName}
+                </MenuItem>
+              ))
+            }
           </Select>
           <TextField
             margin="dense"

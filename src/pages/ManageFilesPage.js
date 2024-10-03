@@ -2,42 +2,43 @@ import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, IconButton, TextField } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';  // 아이콘 추가
+import Autocomplete from '@mui/material/Autocomplete';
 
 function ManageFilesPage() {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [policies, setPolicies] = useState([]);
-  const [files, setFiles] = useState([]);  // 파일 목록 상태 추가
+  const [files, setFiles] = useState([]);
   const [open, setOpen] = useState(false);
   const [newPolicy, setNewPolicy] = useState({
     downloadType: '',
     downloadFilePath: '',
     priority: 0,
     userId: '',
-    fileId: '',  // 파일 ID도 포함
+    fileId: '',
   });
 
-  const [newFile, setNewFile] = useState(null); // 파일 업로드 상태 추가
+  const [newFile, setNewFile] = useState(null);
 
   // 사용자 목록 및 파일 목록 가져오기
   useEffect(() => {
     async function fetchData() {
       try {
-        // 사용자 목록 가져오기
         const userResponse = await fetch('/api/admin/users');
         const usersData = await userResponse.json();
         setUsers(usersData.users);
 
-        // 파일 목록 가져오기
         const fileResponse = await fetch('/api/admin/files');
         const fileData = await fileResponse.json();
-        setFiles(fileData.files);  // 파일 목록 설정
-
-        // 초기 사용자 선택
+        setFiles(fileData.files);
+        /*
+        // 기본적으로 사용자 목록을 획득 했을 때
+        // 선택과 무관하게 처음 발견된 사용자의 파일정책을 보여준다.
         if (usersData.users.length > 0) {
           setSelectedUser(usersData.users[0].id);
           fetchPolicies(usersData.users[0].id);
         }
+        */
       } catch (error) {
         console.error('Error fetching users or files:', error);
       }
@@ -86,7 +87,7 @@ function ManageFilesPage() {
       }
 
       const data = await response.json();
-      setPolicies([...policies, data.filePolicy]);  // 새로운 정책 추가
+      setPolicies([...policies, data.filePolicy]);
       setOpen(false);
     } catch (error) {
       console.error('Error saving policy:', error);
@@ -95,13 +96,8 @@ function ManageFilesPage() {
 
   // 파일 정책 삭제 처리
   const handleDeletePolicy = async (fileId) => {
-
-    const confirmDelete = window.confirm('정말 삭제하시겠습니까?');  // 삭제 확인 메시지
-
-    if (!confirmDelete) {
-      // 사용자가 취소를 선택하면 삭제 중단
-      return;
-    }
+    const confirmDelete = window.confirm('정말 삭제하시겠습니까?');
+    if (!confirmDelete) return;
 
     try {
       const response = await fetch(`/api/admin/users/${selectedUser}/files/${fileId}/policy`, {
@@ -114,7 +110,6 @@ function ManageFilesPage() {
         return;
       }
 
-      // 정책 삭제 후 목록에서 제거
       setPolicies(policies.filter(policy => policy.fileId !== fileId));
     } catch (error) {
       console.error('Error deleting policy:', error);
@@ -123,14 +118,14 @@ function ManageFilesPage() {
 
   // 파일 업로드 처리
   const handleFileChange = (event) => {
-    setNewFile(event.target.files[0]); // 선택된 파일을 상태에 저장
+    setNewFile(event.target.files[0]);
   };
 
   const handleUploadFile = async () => {
     if (!newFile) return;
 
     const formData = new FormData();
-    formData.append('file', newFile);  // 선택된 파일을 FormData로 전송
+    formData.append('file', newFile);
 
     try {
       const response = await fetch('/api/admin/files', {
@@ -139,9 +134,8 @@ function ManageFilesPage() {
       });
 
       const data = await response.json();
-      // 업로드 후 파일 목록 갱신
       setFiles([...files, data.file]);
-      setNewFile(null);  // 업로드 후 파일 상태 초기화
+      setNewFile(null);
     } catch (error) {
       console.error('Error uploading file:', error);
     }
@@ -151,21 +145,18 @@ function ManageFilesPage() {
     <div>
       <h1>Manage Files and Policies</h1>
 
-      {/* 사용자 선택 드롭다운 */}
-      <Select
-        value={selectedUser}
-        onChange={(e) => {
-          setSelectedUser(e.target.value);
-          fetchPolicies(e.target.value);
+      {/* 사용자 선택 Autocomplete */}
+      <Autocomplete
+        options={users}
+        getOptionLabel={(option) => option.username}
+        onChange={(event, value) => {
+          if (value) {
+            setSelectedUser(value.id);
+            fetchPolicies(value.id);
+          }
         }}
-        fullWidth
-      >
-        {users.map((user) => (
-          <MenuItem key={user.id} value={user.id}>
-            {user.username}
-          </MenuItem>
-        ))}
-      </Select>
+        renderInput={(params) => <TextField {...params} label="사용자를 선택하세요" variant="outlined" fullWidth />}
+      />
 
       {/* 파일 업로드 입력 필드 */}
       <div style={{ marginTop: '20px', marginBottom: '20px' }}>
@@ -181,20 +172,21 @@ function ManageFilesPage() {
         </Button>
       </div>
 
+      {/* 파일 정책 목록 테이블 */}
       <TableContainer component={Paper} style={{ marginTop: '20px' }}>
         <Table>
           <TableHead>
-            <TableRow>
+            <TableRow style={{ backgroundColor: '#f5f5f5' }}>
               <TableCell>FileName</TableCell>
               <TableCell>Download Type</TableCell>
               <TableCell>Download File Path</TableCell>
               <TableCell>Priority</TableCell>
-              <TableCell align="right">Action</TableCell> {/* 액션 컬럼 추가 */}
+              <TableCell align="right">Action</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {policies.map((policy) => (
-              <TableRow key={policy.id}>
+            {policies.map((policy, index) => (
+              <TableRow key={policy.id} style={{ backgroundColor: index % 2 === 0 ? '#fafafa' : '#fff' }}>
                 <TableCell>{policy.File.fileName || 'N/A'}</TableCell>
                 <TableCell>{policy.downloadType}</TableCell>
                 <TableCell>{policy.downloadFilePath || 'N/A'}</TableCell>
@@ -203,7 +195,7 @@ function ManageFilesPage() {
                   <IconButton color="error" onClick={() => handleDeletePolicy(policy.fileId)}>
                     <RemoveIcon />
                   </IconButton>
-                </TableCell> {/* 삭제 버튼 추가 */}
+                </TableCell>
               </TableRow>
             ))}
             <TableRow>
@@ -261,7 +253,9 @@ function ManageFilesPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleSavePolicy} color="primary">Save</Button>
+          <Button onClick={handleSavePolicy} color="primary">
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
     </div>
