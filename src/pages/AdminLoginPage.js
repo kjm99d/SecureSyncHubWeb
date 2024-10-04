@@ -27,9 +27,10 @@ function LoginPage() {
       const result = await response.json();
 
       if (response.ok) {
+        const token = result.token; // 서버에서 반환한 JWT 토큰
+        localStorage.setItem('token', token); // 토큰을 localStorage에 저장
         setSuccessMessage('Login successful');
-        // 로그인 성공 시, 예를 들어 /admin/console로 리다이렉트
-        window.location.href = '/admin/console';
+        window.location.href = '/admin/console'; // 리다이렉트
       } else {
         setErrorMessage(result.message || 'Login failed');
       }

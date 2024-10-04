@@ -12,7 +12,13 @@ function ManagePoliciesPage() {
   useEffect(() => {
     async function fetchPolicies() {
       try {
-        const response = await fetch('/api/admin/policy');  // getPolicy API 호출
+        const response = await fetch('/api/admin/policy', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+          },
+        });
         const data = await response.json();
         setPolicies(data.policies);
       } catch (error) {
@@ -30,6 +36,7 @@ function ManagePoliciesPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
         },
         body: JSON.stringify(newPolicy), // 새로운 정책 데이터 전송
       });
@@ -57,6 +64,10 @@ function ManagePoliciesPage() {
     try {
       const response = await fetch(`/api/admin/policy/${policyId}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+        },
       });
 
       if (response.ok) {

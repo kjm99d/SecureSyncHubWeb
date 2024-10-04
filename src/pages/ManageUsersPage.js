@@ -39,7 +39,13 @@ function ManageUsersPage() {
   useEffect(() => {
     async function fetchUsers() {
       try {
-        const userResponse = await fetch('/api/admin/users');
+        const userResponse = await fetch('/api/admin/users', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+          },
+        });
         const usersData = await userResponse.json();
         setUsers(usersData.users);
 
@@ -59,7 +65,13 @@ function ManageUsersPage() {
     // 일반 정책 목록 불러오기
     async function fetchPolicies() {
       try {
-        const response = await fetch('/api/admin/policy');
+        const response = await fetch('/api/admin/policy', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+          },
+        });
         const data = await response.json();
         setPolicies(data.policies);
       } catch (error) {
@@ -72,7 +84,13 @@ function ManageUsersPage() {
 
   const fetchUserPolicies = async (userId) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}/policies`);
+      const response = await fetch(`/api/admin/users/${userId}/policies`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+        },
+      });
       const data = await response.json();
       setUserPolicies(data.userPolicies);
     } catch (error) {
@@ -100,6 +118,7 @@ function ManageUsersPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
         },
         body: JSON.stringify({
           role: user.role,
@@ -127,6 +146,7 @@ function ManageUsersPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
         },
         body: JSON.stringify({
           policyId: newPolicyId,
@@ -156,6 +176,10 @@ function ManageUsersPage() {
     try {
       const response = await fetch(`/api/admin/users/${selectedUser}/policy/${policyId}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+        },
       });
 
       if (response.ok) {

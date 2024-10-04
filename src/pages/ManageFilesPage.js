@@ -24,11 +24,24 @@ function ManageFilesPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const userResponse = await fetch('/api/admin/users');
+
+        const userResponse = await fetch('/api/admin/users', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+          },
+        });
         const usersData = await userResponse.json();
         setUsers(usersData.users);
 
-        const fileResponse = await fetch('/api/admin/files');
+        const fileResponse = await fetch('/api/admin/files', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+          },
+        });
         const fileData = await fileResponse.json();
         setFiles(fileData.files);
         /*
@@ -50,7 +63,14 @@ function ManageFilesPage() {
   // 특정 사용자의 파일 정책 가져오기
   const fetchPolicies = async (userId) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}/policies`);
+      const response = await fetch(`/api/admin/users/${userId}/policies`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+        },
+      });
+
       const data = await response.json();
       setPolicies(data.filePolicies);
     } catch (error) {
@@ -72,6 +92,7 @@ function ManageFilesPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
         },
         body: JSON.stringify({
           downloadType,
@@ -102,6 +123,10 @@ function ManageFilesPage() {
     try {
       const response = await fetch(`/api/admin/users/${selectedUser}/files/${fileId}/policy`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+        },
       });
 
       if (!response.ok) {
@@ -131,6 +156,10 @@ function ManageFilesPage() {
       const response = await fetch('/api/admin/files', {
         method: 'POST',
         body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
+        },
       });
 
       const data = await response.json();
