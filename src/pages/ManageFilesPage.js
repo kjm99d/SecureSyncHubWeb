@@ -157,7 +157,6 @@ function ManageFilesPage() {
         method: 'POST',
         body: formData,
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': localStorage.getItem('token'), // JWT 토큰을 Authorization 헤더에 추가
         },
       });
